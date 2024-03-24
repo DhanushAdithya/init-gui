@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Init app",
-  description: "natural language to do system level operations",
+  description: "Use natural language to do system level operations",
 };
 
 export default function RootLayout({

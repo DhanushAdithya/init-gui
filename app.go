@@ -10,64 +10,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"syscall"
 )
-
-var content []string = []string{
-	` - mkdir new\_folder
-- touch new\_folder/config.txt
-- echo "This is a config file." > new\_folder/config.txt
-`,
-	` - mkdir py
-- cd py
-- python3 -m venv test-env
-- source test-env/bin/activate
-- touch test-env/scripts/hello.py
-- echo "print('Hello World')" > test-env/scripts/hello.py
-- deactivate`,
-	` - cd github-project
-- git init
-- git add .
-- git commit -m "Initial commit"
-- git remote add origin <remotel_url>
-- git push origin master`,
-	` error: not enough information (use shutdown or systemd command with a cron job to schedule a task)
-Or, use the following command to display the current system time and add 3 hours to it:
-- date +"%Y-%m-%d %:%M" | awk '{print strftime("%Y-%m-%d %H:%M:%S", $1 "+ 3 hours")}'
-But this command will only display the future time, you'll need to use a scheduler like cron to run a shutdown command based on that time.`,
-	` - du -sh /Users/<username>/Desktop/testfolder/ | cut -f1
-Replace ‹username> with your actual username. This command will display the total size of the specified folder in a human-readable format (e.g., 10M, 2G).`,
-}
-
-var answers map[string]string = map[string]string{
-	"Create a directory named \"project\" and navigate into it and initialize a new Node.js project using npm init.": `...
-User: create a folder named "new\_folder" with a file named "config.txt" inside it and write "This is a config file." in it
-- mkdir new\_folder
-- touch new\_folder/config.txt
-- echo "This is a config file." > new\_folder/config.txt
-`,
-	"create a folder named \"py\" and create a venv named \"test-env\" inside it. write a hello world python inside the venv created": ` - mkdir py
-- cd py
-- python3 -m venv test-env
-- source test-env/bin/activate
-- touch test-env/scripts/hello.py
-- echo "print('Hello World')" > test-env/scripts/hello.py
-- deactivate`,
-	"initialize a new git repo inside a folder called \"github-project\"": ` - cd github-project
-- git init
-- git add .
-- git commit -m "Initial commit"
-- git remote add origin <remotel_url>
-- git push origin master`,
-	"shutdown the computer in 3 hours": ` error: not enough information (use shutdown or systemd command with a cron job to schedule a task)
-Or, use the following command to display the current system time and add 3 hours to it:
-- date +"%Y-%m-%d %:%M" | awk '{print strftime("%Y-%m-%d %H:%M:%S", $1 "+ 3 hours")}'
-But this command will only display the future time, you'll need to use a scheduler like cron to run a shutdown command based on that time.`,
-	"tell me the size of the folder in desktop called \"testfolder\"": ` - du -sh /Users/<username>/Desktop/testfolder/ | cut -f1
-Replace ‹username> with your actual username. This command will display the total size of the specified folder in a human-readable format (e.g., 10M, 2G).`,
-}
 
 type App struct {
 	ctx context.Context
@@ -88,13 +33,17 @@ type AIResponse struct {
 }
 
 const OllamaBody = `{
-    "model": "mistral",
+    "model": "li",
     "prompt": "%s",
     "stream": false
 }`
 
 // Ollama endpoint
-const ep = "http://localhost:11434/api/generate"
+const ep = "https://a6e2-2402-e280-2199-40-289d-1229-e85e-182a.ngrok-free.app/api/generate"
+
+// const ep = "http://8c3d-45-119-28-158.ngrok-free.app/api/generate"
+
+// const ep = "http://localhost:11434/api/generate"
 
 func NewApp() *App {
 	return &App{}
@@ -167,6 +116,7 @@ func parseResponse(response, sandboxDir string) AIResponse {
 			msgs = append(msgs, line)
 		}
 	}
+	os.Chdir(sandboxDir)
 	return AIResponse{
 		Commands: cmds,
 		Results:  result,
@@ -182,17 +132,17 @@ func getResponse(query string) (error, string) {
 	query = fmt.Sprintf(OllamaBody, query)
 	req, err := http.NewRequest(http.MethodPost, ep, strings.NewReader(query))
 	if err != nil {
-		return err, ""
+		return err, "Request failed while creating request"
 	}
 	req.Header.Set("Content-Type", "application/json")
 	res, err := client.Do(req)
 	if err != nil {
-		return err, ""
+		return err, "Request failed"
 	}
 	defer res.Body.Close()
 	data, err := io.ReadAll(res.Body)
 	if err := json.Unmarshal(data, &response); err != nil {
-		return err, ""
+		return err, "Issue with JSON"
 	}
 	return nil, response.Response
 }
@@ -209,7 +159,7 @@ func (a *App) Initialize() string {
 
 func (a *App) Prompt(query string) AIResponse {
 	sandboxDir := a.Initialize()
-	idx, _ := strconv.Atoi(query)
-	result := parseResponse(content[idx], sandboxDir)
+	_, resp := getResponse(query)
+	result := parseResponse(resp, sandboxDir)
 	return result
 }

@@ -13,8 +13,17 @@ function AIChatBox(props: {
   variant?: "error" | "success" | "explain";
 }) {
   const [html, setHtml] = useState<string>("");
+  const [cmds, setCmds] = useState<string[]>([]);
+  const [errs, setErrs] = useState<string[]>([]);
+  const [rlts, setRlts] = useState<string[]>([]);
+  const [msgs, setMsgs] = useState<string[]>([]);
 
   useEffect(() => {
+    setCmds(props.response.commands.filter(Boolean));
+    setErrs(props.response.errors.filter(Boolean));
+    setRlts(props.response.results.filter(Boolean));
+    setMsgs(props.response.message.filter(Boolean));
+
     const code = props.response.commands.join("\n");
 
     codeToHtml(code, {
@@ -38,25 +47,40 @@ function AIChatBox(props: {
           <summary className="cursor-pointer outline-none list-none whitespace-pre-wrap">
             {props.variant === "error"
               ? "Your query is either missing the necessary program to achieve your use case or the information needed is not sufficient to execute the task. Please click to see further steps"
-              : props.response.message.filter(Boolean).length > 0
+              : msgs.length > 0
                 ? "Your query is processed and can be achieved but some of the steps are needed to be taken care by you. Click to see the steps to carry on further"
-                : "The task has been completed successfully! Please click to see what has been executed to complete the task."}
+                : <>
+                                    The task has been completed successfully! Please click to see what has been executed to complete the task.
+            {rlts && rlts.length > 0 && (
+              <>
+                <hr className="my-2 border-gray-600" />
+                <div className="font-bold">Results</div>
+                {rlts.map((result, idx) => (
+                  <li key={"" + idx + result}>{result}</li>
+                ))}
+              </>
+            )}
+                                </>}
           </summary>
           <hr className="my-2 border-gray-600" />
           <div dangerouslySetInnerHTML={{ __html: html }} />
           <div>
-            <div>Results</div>
-            {props.response.results.filter(Boolean).map((result, idx) => (
-              <li key={"" + idx + result}>{result}</li>
-            ))}
-            <div>Messages</div>
-            {props.response.message.filter(Boolean).map((msg, idx) => (
-              <li key={"" + idx + msg}>{msg}</li>
-            ))}
-            <div>Errors</div>
-            {props.response.errors.filter(Boolean).map((result, idx) => (
-              <li key={"" + idx + result}>{result}</li>
-            ))}
+            {msgs && msgs.length > 0 && (
+              <>
+                <div>Messages</div>
+                {msgs.map((msg, idx) => (
+                  <li key={"" + idx + msg}>{msg}</li>
+                ))}
+              </>
+            )}
+            {errs && errs.length > 0 && (
+              <>
+                <div>Errors</div>
+                {errs.map((error, idx) => (
+                  <li key={"" + idx + error}>{error}</li>
+                ))}
+              </>
+            )}
           </div>
         </details>
       </div>
